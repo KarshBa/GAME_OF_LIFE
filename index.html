@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game of Life</title>
+  <title>Conway's Game of Life</title>
   <style>
     /* ---------- Base layout ---------- */
     html, body {
@@ -77,10 +77,12 @@
       border: 1px solid #555;
       cursor: pointer;
     }
-    .setupCell.alive { background: #fff; }
     #colorPicker {
       margin-left: 8px;
       cursor: pointer;
+      width: 40px; height: 40px;
+      border: none;
+      padding: 0;
     }
 
     /* ---------- Mobile tweaks ---------- */
@@ -194,24 +196,32 @@
     function createSetupGrid() {
       setupGridEl.innerHTML = '';
       setupPattern.fill(0);
+      liveColor = colorPicker.value;
       for (let i = 0; i < 25; i++) {
         const cell = document.createElement('div');
         cell.className = 'setupCell';
         cell.addEventListener('click', () => {
           setupPattern[i] = setupPattern[i] ? 0 : 1;
-          cell.classList.toggle('alive', setupPattern[i] === 1);
+          if (setupPattern[i]) {
+            cell.style.backgroundColor = liveColor;
+          } else {
+            cell.style.backgroundColor = '#000';
+          }
         });
         setupGridEl.append(cell);
       }
-      // reset color picker
-      colorPicker.value = '#ffffff';
-      liveColor = colorPicker.value;
     }
+
+    colorPicker.addEventListener('input', () => {
+      liveColor = colorPicker.value;
+      document.querySelectorAll('.setupCell').forEach((cell, idx) => {
+        if (setupPattern[idx]) cell.style.backgroundColor = liveColor;
+      });
+    });
 
     function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); }
     function hideModal() { setupModal.style.display = 'none'; }
 
-    // Place pattern centered
     function applySetupPattern() {
       liveColor = colorPicker.value;
       const offsetX = Math.floor((cols - 5)/2);
@@ -245,7 +255,6 @@
       applySetupPattern();
     });
 
-    // Canvas toggle cells (disabled during setup)
     canvas.addEventListener('click', (e) => {
       if (setupModal.style.display !== 'none') return;
       const rect = canvas.getBoundingClientRect();
