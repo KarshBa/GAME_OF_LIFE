@@ -110,8 +110,8 @@
   <!-- Speed control -->
   <div id="speedBox" class="uiBox">
     <label for="speedSlider">Speed:</label>
-    <input type="range" id="speedSlider" min="1" max="50" step="1" value="1" />
-    <span id="speedVal">1</span> gen/frame
+    <input type="range" id="speedSlider" min="0.1" max="50" step="0.1" value="0.5" />
+    <span id="speedVal">0.5</span> gen/frame
   </div>
 
   <!-- Simulation controls -->
@@ -138,7 +138,7 @@
 
     let cellSize = 10, cols, rows;
     let grid, nextGrid;
-    let stepsPerFrame = parseInt(speedSlider.value, 10);
+    let stepsPerFrame = parseFloat(speedSlider.value);
     let isRunning = false;
     let liveColor = '#ffffff';
 
@@ -202,11 +202,8 @@
         cell.className = 'setupCell';
         cell.addEventListener('click', () => {
           setupPattern[i] = setupPattern[i] ? 0 : 1;
-          if (setupPattern[i]) {
-            cell.style.backgroundColor = liveColor;
-          } else {
-            cell.style.backgroundColor = '#000';
-          }
+          if (setupPattern[i]) cell.style.backgroundColor = liveColor;
+          else cell.style.backgroundColor = '#000';
         });
         setupGridEl.append(cell);
       }
@@ -234,7 +231,7 @@
 
     // Event listeners
     window.addEventListener('resize', () => init());
-    speedSlider.addEventListener('input', () => { stepsPerFrame = +speedSlider.value; speedVal.textContent = stepsPerFrame; });
+    speedSlider.addEventListener('input', () => { stepsPerFrame = parseFloat(speedSlider.value); speedVal.textContent = speedSlider.value; });
 
     startPauseBtn.addEventListener('click', () => {
       if (setupModal.style.display !== 'none') return;
