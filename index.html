@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conway's Game of Life</title>
+  <style>
+    /* ---------- Base layout ---------- */
+    html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui,sans-serif; }
+    canvas { display:block; width:100vw; height:100vh; image-rendering:pixelated; }
+
+    .uiBox { position:fixed; z-index:10; background:rgba(0,0,0,0.7); color:#fff; padding:6px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px; user-select:none; }
+    #speedBox { top:10px; left:50%; transform:translateX(-50%); }
+    #controlBox { top:58px; left:10px; }
+
+    button { cursor:pointer; padding:2px 10px; border:1px solid #aaa; border-radius:4px; background:#333; color:#fff; }
+    button:hover { background:#555; }
+    input[type=range] { vertical-align:middle; }
+
+    /* ---------- Mobile tweaks ---------- */
+    @media (max-width:600px) {
+      .uiBox { font-size:12px; gap:4px; }
+      #speedBox { top:6px; left:50%; transform:translateX(-50%); }
+      #controlBox { top:46px; left:10px; }
+      #startPauseBtn { position:fixed; top:6px; right:10px; z-index:11; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Speed control -->
+  <div id="speedBox" class="uiBox">
+    <label for="speedSlider">Speed:</label>
+    <input type="range" id="speedSlider" min="1" max="50" step="1" value="1" />
+    <span id="speedVal">1</span> gen/frame
+  </div>
+
+  <!-- Simulation controls -->
+  <div id="controlBox" class="uiBox">
+    <button id="startPauseBtn">Start</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <canvas id="lifeCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('lifeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let cellSize = 10;
+    let cols, rows;
+    let grid, nextGrid;
+    let stepsPerFrame = parseInt(speedSlider.value, 10);
+    let isRunning = false;
+
+    function dims() {
+      return {
+        cols: Math.floor(canvas.width / cellSize),
+        rows: Math.floor(canvas.height / cellSize)
+      };
+    }
+
+    function init(blank = true) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const d = dims();
+      cols = d.cols;
+      rows = d.rows;
+      grid = new Array(cols * rows).fill(0);
+      nextGrid = new Array(cols * rows).fill(0);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!blank) randomize();
+    }
+
+    function randomize() {
+      for (let i = 0; i < grid.length; i++) {
+        grid[i] = Math.random() < 0.3 ? 1 : 0;
+      }
+    }
+
+    function drawGrid() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#fff';
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (grid[y * cols + x]) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    function step() {
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const idx = y * cols + x;
+          let neighbors = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx || dy) {
+                const nx = (x + dx + cols) % cols;
+                const ny = (y + dy + rows) % rows;
+                neighbors += grid[ny * cols + nx];
+              }
+            }
+          }
+          nextGrid[idx] = (grid[idx]
+            ? (neighbors === 2 || neighbors === 3)
+            : (neighbors === 3)) ? 1 : 0;
+        }
+      }
+      [grid, nextGrid] = [nextGrid, grid];
+    }
+
+    function animate() {
+      if (isRunning) {
+        for (let i = 0; i < stepsPerFrame; i++) step();
+        drawGrid();
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // Event listeners
+    window.addEventListener('resize', () => init());
+
+    speedSlider.addEventListener('input', () => {
+      stepsPerFrame = parseInt(speedSlider.value, 10);
+      speedVal.textContent = stepsPerFrame;
+    });
+
+    startPauseBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      startPauseBtn.textContent = isRunning ? 'Pause' : 'Start';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      isRunning = false;
+      startPauseBtn.textContent = 'Start';
+      grid.fill(0);
+      drawGrid();
+    });
+
+    // Toggle cells on click
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / cellSize);
+      const y = Math.floor((e.clientY - rect.top) / cellSize);
+      const idx = y * cols + x;
+      grid[idx] = grid[idx] ? 0 : 1;
+      drawGrid();
+    });
+
+    // Initialize and start loop
+    init(true);
+    drawGrid();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
