@@ -126,7 +126,6 @@
     const canvas = document.getElementById('lifeCanvas');
     const ctx = canvas.getContext('2d');
 
-    // UI elements
     const speedSlider = document.getElementById('speedSlider');
     const speedVal = document.getElementById('speedVal');
     const startPauseBtn = document.getElementById('startPauseBtn');
@@ -142,11 +141,11 @@
     let isRunning = false;
     let liveColor = '#ffffff';
     let lastTime = 0;
-
-    // 5×5 setup pattern
     let setupPattern = new Array(25).fill(0);
 
-    function dims() { return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) }; }
+    function dims() {
+      return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) };
+    }
 
     function init(blank = true) {
       canvas.width = window.innerWidth;
@@ -163,14 +162,11 @@
     }
 
     function drawGrid() {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = liveColor;
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          if (grid[y * cols + x]) {
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-          }
+          if (grid[y * cols + x]) ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
         }
       }
     }
@@ -178,7 +174,6 @@
     function step() {
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          const idx = y * cols + x;
           let neighbors = 0;
           for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
@@ -189,7 +184,10 @@
               }
             }
           }
-          nextGrid[idx] = (grid[idx] ? (neighbors === 2 || neighbors === 3) : (neighbors === 3)) ? 1 : 0;
+          nextGrid[y * cols + x] = (grid[y * cols + x]
+            ? (neighbors === 2 || neighbors === 3)
+            : (neighbors === 3))
+            ? 1 : 0;
         }
       }
       [grid, nextGrid] = [nextGrid, grid];
@@ -207,7 +205,6 @@
       requestAnimationFrame(animate);
     }
 
-    // Setup grid UI
     function createSetupGrid() {
       setupGridEl.innerHTML = '';
       setupPattern.fill(0);
@@ -245,18 +242,16 @@
     function hideModal() { setupModal.style.display = 'none'; }
 
     function applySetupPattern() {
-      liveColor = colorPicker.value;
       const offsetX = Math.floor((cols - 5) / 2);
       const offsetY = Math.floor((rows - 5) / 2);
       for (let y = 0; y < 5; y++) {
-        for (let x = 0; x < cols; x++) {
+        for (let x = 0; x < 5; x++) {
           grid[(offsetY + y) * cols + (offsetX + x)] = setupPattern[y * 5 + x];
         }
       }
       drawGrid();
     }
 
-    // Controls
     startPauseBtn.addEventListener('click', () => {
       if (setupModal.style.display !== 'none') return;
       isRunning = !isRunning;
@@ -273,16 +268,14 @@
     canvas.addEventListener('click', (e) => {
       if (setupModal.style.display !== 'none') return;
       const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / cellSize);
-      const y = Math.floor((e.clientY - rect.top) / cellSize);
-      const idx = y * cols + x;
-      grid[idx] = grid[idx] ? 0 : 1;
+      const cx = Math.floor((e.clientX - rect.left) / cellSize);
+      const cy = Math.floor((e.clientY - rect.top) / cellSize);
+      grid[cy * cols + cx] = grid[cy * cols + cx] ? 0 : 1;
       drawGrid();
     });
 
     window.addEventListener('resize', () => init());
 
-    // Initialize
     init(true);
     showModal();
     requestAnimationFrame(animate);
