@@ -111,7 +111,7 @@
   <div id="speedBox" class="uiBox">
     <label for="speedSlider">Speed:</label>
     <input type="range" id="speedSlider" min="0.1" max="50" step="0.1" value="0.25" />
-    <span id="speedVal">0.25</span> gen/frame
+    <span id="speedVal">0.25</span> gen/sec
   </div>
 
   <!-- Simulation controls -->
@@ -138,16 +138,15 @@
 
     let cellSize = 10, cols, rows;
     let grid, nextGrid;
-    let stepsPerFrame = parseFloat(speedSlider.value);
+    let genPerSec = parseFloat(speedSlider.value);
     let isRunning = false;
     let liveColor = '#ffffff';
+    let lastTime = 0;
 
     // 5×5 setup pattern
     let setupPattern = new Array(25).fill(0);
 
-    function dims() {
-      return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) };
-    }
+    function dims() { return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) }; }
 
     function init(blank = true) {
       canvas.width = window.innerWidth;
@@ -196,10 +195,14 @@
       [grid, nextGrid] = [nextGrid, grid];
     }
 
-    function animate() {
+    function animate(time) {
       if (isRunning) {
-        for (let i = 0; i < stepsPerFrame; i++) step();
-        drawGrid();
+        const interval = 1000 / genPerSec;
+        if (time - lastTime >= interval) {
+          step();
+          drawGrid();
+          lastTime = time;
+        }
       }
       requestAnimationFrame(animate);
     }
@@ -227,13 +230,18 @@
       });
     });
 
+    speedSlider.addEventListener('input', () => {
+      genPerSec = parseFloat(speedSlider.value);
+      speedVal.textContent = speedSlider.value;
+    });
+
     setupStartBtn.addEventListener('click', () => {
       init(true);
       hideModal();
       applySetupPattern();
     });
 
-    function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); }
+    function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); lastTime = 0; }
     function hideModal() { setupModal.style.display = 'none'; }
 
     function applySetupPattern() {
@@ -241,20 +249,14 @@
       const offsetX = Math.floor((cols - 5) / 2);
       const offsetY = Math.floor((rows - 5) / 2);
       for (let y = 0; y < 5; y++) {
-        for (let x = 0; x < 5; x++) {
+        for (let x = 0; x < cols; x++) {
           grid[(offsetY + y) * cols + (offsetX + x)] = setupPattern[y * 5 + x];
         }
       }
       drawGrid();
     }
 
-    // Event listeners
-    window.addEventListener('resize', () => init());
-    speedSlider.addEventListener('input', () => {
-      stepsPerFrame = parseFloat(speedSlider.value);
-      speedVal.textContent = speedSlider.value;
-    });
-
+    // Controls
     startPauseBtn.addEventListener('click', () => {
       if (setupModal.style.display !== 'none') return;
       isRunning = !isRunning;
@@ -277,6 +279,8 @@
       grid[idx] = grid[idx] ? 0 : 1;
       drawGrid();
     });
+
+    window.addEventListener('resize', () => init());
 
     // Initialize
     init(true);
