@@ -78,6 +78,10 @@
       cursor: pointer;
     }
     .setupCell.alive { background: #fff; }
+    #colorPicker {
+      margin-left: 8px;
+      cursor: pointer;
+    }
 
     /* ---------- Mobile tweaks ---------- */
     @media (max-width: 600px) {
@@ -90,8 +94,14 @@
 <body>
   <!-- Setup Modal -->
   <div id="setupModal">
-    <h2>Select a 5×5 Starting Pattern</h2>
-    <div id="setupGrid"></div>
+    <h2>Select a 5×5 Starting Pattern & Color</h2>
+    <div style="display:flex; align-items:center;">
+      <div id="setupGrid"></div>
+      <div style="display:flex; flex-direction:column; align-items:center; margin-left:16px;">
+        <label for="colorPicker">Cell Color:</label>
+        <input type="color" id="colorPicker" value="#ffffff" />
+      </div>
+    </div>
     <button id="setupStartBtn">Start Game</button>
   </div>
 
@@ -122,18 +132,18 @@
     const setupModal = document.getElementById('setupModal');
     const setupGridEl = document.getElementById('setupGrid');
     const setupStartBtn = document.getElementById('setupStartBtn');
+    const colorPicker = document.getElementById('colorPicker');
 
     let cellSize = 10, cols, rows;
     let grid, nextGrid;
     let stepsPerFrame = parseInt(speedSlider.value, 10);
     let isRunning = false;
+    let liveColor = '#ffffff';
 
     // 5×5 setup pattern
     let setupPattern = new Array(25).fill(0);
 
-    function dims() {
-      return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) };
-    }
+    function dims() { return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) }; }
 
     function init(blank = true) {
       canvas.width = window.innerWidth;
@@ -145,13 +155,11 @@
       drawGrid();
     }
 
-    function randomize() {
-      for (let i = 0; i < grid.length; i++) grid[i] = Math.random() < 0.3 ? 1 : 0;
-    }
+    function randomize() { for (let i = 0; i < grid.length; i++) grid[i] = Math.random() < 0.3 ? 1 : 0; }
 
     function drawGrid() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = liveColor;
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           if (grid[y * cols + x]) ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
@@ -195,6 +203,9 @@
         });
         setupGridEl.append(cell);
       }
+      // reset color picker
+      colorPicker.value = '#ffffff';
+      liveColor = colorPicker.value;
     }
 
     function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); }
@@ -202,6 +213,7 @@
 
     // Place pattern centered
     function applySetupPattern() {
+      liveColor = colorPicker.value;
       const offsetX = Math.floor((cols - 5)/2);
       const offsetY = Math.floor((rows - 5)/2);
       for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
