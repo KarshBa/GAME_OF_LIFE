@@ -16,9 +16,11 @@
     }
     canvas {
       display: block;
+      position: absolute;
+      top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      background: #000; /* ensure black background */
+      background: #000;
       image-rendering: pixelated;
     }
 
@@ -37,15 +39,8 @@
       font-size: 14px;
       user-select: none;
     }
-    #speedBox {
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    #controlBox {
-      top: 58px;
-      left: 10px;
-    }
+    #speedBox { top: 10px; left: 50%; transform: translateX(-50%); }
+    #controlBox { top: 58px; left: 10px; }
 
     button {
       cursor: pointer;
@@ -55,38 +50,51 @@
       background: #333;
       color: #fff;
     }
-    button:hover {
-      background: #555;
+    button:hover { background: #555; }
+    input[type=range] { vertical-align: middle; }
+
+    /* ---------- Setup Modal ---------- */
+    #setupModal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+      z-index: 20;
+      color: #fff;
     }
-    input[type=range] {
-      vertical-align: middle;
+    #setupGrid {
+      display: grid;
+      grid-template-columns: repeat(5, 30px);
+      grid-template-rows: repeat(5, 30px);
+      gap: 4px;
+      margin-bottom: 12px;
     }
+    .setupCell {
+      width: 30px; height: 30px;
+      background: #000;
+      border: 1px solid #555;
+      cursor: pointer;
+    }
+    .setupCell.alive { background: #fff; }
 
     /* ---------- Mobile tweaks ---------- */
     @media (max-width: 600px) {
-      .uiBox {
-        font-size: 12px;
-        gap: 4px;
-      }
-      #speedBox {
-        top: 6px;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      #controlBox {
-        top: 46px;
-        left: 10px;
-      }
-      #startPauseBtn {
-        position: fixed;
-        top: 6px;
-        right: 10px;
-        z-index: 11;
-      }
+      .uiBox { font-size: 12px; gap: 4px; }
+      #speedBox { top: 6px; }
+      #controlBox { top: 46px; }
     }
   </style>
 </head>
 <body>
+  <!-- Setup Modal -->
+  <div id="setupModal">
+    <h2>Select a 5×5 Starting Pattern</h2>
+    <div id="setupGrid"></div>
+    <button id="setupStartBtn">Start Game</button>
+  </div>
+
   <!-- Speed control -->
   <div id="speedBox" class="uiBox">
     <label for="speedSlider">Speed:</label>
@@ -106,53 +114,47 @@
     const canvas = document.getElementById('lifeCanvas');
     const ctx = canvas.getContext('2d');
 
+    // UI elements
     const speedSlider = document.getElementById('speedSlider');
     const speedVal = document.getElementById('speedVal');
     const startPauseBtn = document.getElementById('startPauseBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const setupModal = document.getElementById('setupModal');
+    const setupGridEl = document.getElementById('setupGrid');
+    const setupStartBtn = document.getElementById('setupStartBtn');
 
-    let cellSize = 10;
-    let cols, rows;
+    let cellSize = 10, cols, rows;
     let grid, nextGrid;
     let stepsPerFrame = parseInt(speedSlider.value, 10);
     let isRunning = false;
 
+    // 5×5 setup pattern
+    let setupPattern = new Array(25).fill(0);
+
     function dims() {
-      return {
-        cols: Math.floor(canvas.width / cellSize),
-        rows: Math.floor(canvas.height / cellSize)
-      };
+      return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) };
     }
 
     function init(blank = true) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      const d = dims();
-      cols = d.cols;
-      rows = d.rows;
+      const d = dims(); cols = d.cols; rows = d.rows;
       grid = new Array(cols * rows).fill(0);
       nextGrid = new Array(cols * rows).fill(0);
-      drawGrid();
       if (!blank) randomize();
+      drawGrid();
     }
 
     function randomize() {
-      for (let i = 0; i < grid.length; i++) {
-        grid[i] = Math.random() < 0.3 ? 1 : 0;
-      }
+      for (let i = 0; i < grid.length; i++) grid[i] = Math.random() < 0.3 ? 1 : 0;
     }
 
     function drawGrid() {
-      // black background
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // white cells
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#fff';
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          if (grid[y * cols + x]) {
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-          }
+          if (grid[y * cols + x]) ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
         }
       }
     }
@@ -162,19 +164,11 @@
         for (let x = 0; x < cols; x++) {
           const idx = y * cols + x;
           let neighbors = 0;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx || dy) {
-                const nx = (x + dx + cols) % cols;
-                const ny = (y + dy + rows) % rows;
-                neighbors += grid[ny * cols + nx];
-              }
-            }
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx||dy) {
+            const nx = (x+dx+cols)%cols, ny = (y+dy+rows)%rows;
+            neighbors += grid[ny*cols+nx];
           }
-          nextGrid[idx] = (grid[idx]
-            ? (neighbors === 2 || neighbors === 3)
-            : (neighbors === 3))
-            ? 1 : 0;
+          nextGrid[idx] = (grid[idx] ? (neighbors===2||neighbors===3) : (neighbors===3)) ? 1 : 0;
         }
       }
       [grid, nextGrid] = [nextGrid, grid];
@@ -188,15 +182,40 @@
       requestAnimationFrame(animate);
     }
 
+    // Setup grid UI
+    function createSetupGrid() {
+      setupGridEl.innerHTML = '';
+      setupPattern.fill(0);
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'setupCell';
+        cell.addEventListener('click', () => {
+          setupPattern[i] = setupPattern[i] ? 0 : 1;
+          cell.classList.toggle('alive', setupPattern[i] === 1);
+        });
+        setupGridEl.append(cell);
+      }
+    }
+
+    function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); }
+    function hideModal() { setupModal.style.display = 'none'; }
+
+    // Place pattern centered
+    function applySetupPattern() {
+      const offsetX = Math.floor((cols - 5)/2);
+      const offsetY = Math.floor((rows - 5)/2);
+      for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
+        grid[(offsetY+y)*cols + (offsetX+x)] = setupPattern[y*5 + x];
+      }
+      drawGrid();
+    }
+
     // Event listeners
     window.addEventListener('resize', () => init());
-
-    speedSlider.addEventListener('input', () => {
-      stepsPerFrame = parseInt(speedSlider.value, 10);
-      speedVal.textContent = stepsPerFrame;
-    });
+    speedSlider.addEventListener('input', () => { stepsPerFrame = +speedSlider.value; speedVal.textContent = stepsPerFrame; });
 
     startPauseBtn.addEventListener('click', () => {
+      if (setupModal.style.display !== 'none') return;
       isRunning = !isRunning;
       startPauseBtn.textContent = isRunning ? 'Pause' : 'Start';
     });
@@ -204,22 +223,30 @@
     clearBtn.addEventListener('click', () => {
       isRunning = false;
       startPauseBtn.textContent = 'Start';
-      grid.fill(0);
-      drawGrid();
+      init(true);
+      showModal();
     });
 
-    // Toggle cells on click
+    setupStartBtn.addEventListener('click', () => {
+      init(true);
+      hideModal();
+      applySetupPattern();
+    });
+
+    // Canvas toggle cells (disabled during setup)
     canvas.addEventListener('click', (e) => {
+      if (setupModal.style.display !== 'none') return;
       const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / cellSize);
-      const y = Math.floor((e.clientY - rect.top) / cellSize);
-      const idx = y * cols + x;
+      const x = Math.floor((e.clientX - rect.left)/cellSize);
+      const y = Math.floor((e.clientY - rect.top)/cellSize);
+      const idx = y*cols + x;
       grid[idx] = grid[idx] ? 0 : 1;
       drawGrid();
     });
 
     // Initialize
     init(true);
+    showModal();
     requestAnimationFrame(animate);
   </script>
 </body>
