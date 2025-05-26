@@ -110,8 +110,8 @@
   <!-- Speed control -->
   <div id="speedBox" class="uiBox">
     <label for="speedSlider">Speed:</label>
-    <input type="range" id="speedSlider" min="0.1" max="50" step="0.1" value="0.5" />
-    <span id="speedVal">0.5</span> gen/frame
+    <input type="range" id="speedSlider" min="0.1" max="50" step="0.1" value="0.25" />
+    <span id="speedVal">0.25</span> gen/frame
   </div>
 
   <!-- Simulation controls -->
@@ -145,7 +145,9 @@
     // 5×5 setup pattern
     let setupPattern = new Array(25).fill(0);
 
-    function dims() { return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) }; }
+    function dims() {
+      return { cols: Math.floor(canvas.width / cellSize), rows: Math.floor(canvas.height / cellSize) };
+    }
 
     function init(blank = true) {
       canvas.width = window.innerWidth;
@@ -157,14 +159,19 @@
       drawGrid();
     }
 
-    function randomize() { for (let i = 0; i < grid.length; i++) grid[i] = Math.random() < 0.3 ? 1 : 0; }
+    function randomize() {
+      for (let i = 0; i < grid.length; i++) grid[i] = Math.random() < 0.3 ? 1 : 0;
+    }
 
     function drawGrid() {
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = liveColor;
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          if (grid[y * cols + x]) ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          if (grid[y * cols + x]) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
         }
       }
     }
@@ -174,11 +181,16 @@
         for (let x = 0; x < cols; x++) {
           const idx = y * cols + x;
           let neighbors = 0;
-          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx||dy) {
-            const nx = (x+dx+cols)%cols, ny = (y+dy+rows)%rows;
-            neighbors += grid[ny*cols+nx];
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx || dy) {
+                const nx = (x + dx + cols) % cols;
+                const ny = (y + dy + rows) % rows;
+                neighbors += grid[ny * cols + nx];
+              }
+            }
           }
-          nextGrid[idx] = (grid[idx] ? (neighbors===2||neighbors===3) : (neighbors===3)) ? 1 : 0;
+          nextGrid[idx] = (grid[idx] ? (neighbors === 2 || neighbors === 3) : (neighbors === 3)) ? 1 : 0;
         }
       }
       [grid, nextGrid] = [nextGrid, grid];
@@ -202,8 +214,7 @@
         cell.className = 'setupCell';
         cell.addEventListener('click', () => {
           setupPattern[i] = setupPattern[i] ? 0 : 1;
-          if (setupPattern[i]) cell.style.backgroundColor = liveColor;
-          else cell.style.backgroundColor = '#000';
+          cell.style.backgroundColor = setupPattern[i] ? liveColor : '#000';
         });
         setupGridEl.append(cell);
       }
@@ -216,22 +227,33 @@
       });
     });
 
+    setupStartBtn.addEventListener('click', () => {
+      init(true);
+      hideModal();
+      applySetupPattern();
+    });
+
     function showModal() { setupModal.style.display = 'flex'; createSetupGrid(); }
     function hideModal() { setupModal.style.display = 'none'; }
 
     function applySetupPattern() {
       liveColor = colorPicker.value;
-      const offsetX = Math.floor((cols - 5)/2);
-      const offsetY = Math.floor((rows - 5)/2);
-      for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
-        grid[(offsetY+y)*cols + (offsetX+x)] = setupPattern[y*5 + x];
+      const offsetX = Math.floor((cols - 5) / 2);
+      const offsetY = Math.floor((rows - 5) / 2);
+      for (let y = 0; y < 5; y++) {
+        for (let x = 0; x < 5; x++) {
+          grid[(offsetY + y) * cols + (offsetX + x)] = setupPattern[y * 5 + x];
+        }
       }
       drawGrid();
     }
 
     // Event listeners
     window.addEventListener('resize', () => init());
-    speedSlider.addEventListener('input', () => { stepsPerFrame = parseFloat(speedSlider.value); speedVal.textContent = speedSlider.value; });
+    speedSlider.addEventListener('input', () => {
+      stepsPerFrame = parseFloat(speedSlider.value);
+      speedVal.textContent = speedSlider.value;
+    });
 
     startPauseBtn.addEventListener('click', () => {
       if (setupModal.style.display !== 'none') return;
@@ -246,18 +268,12 @@
       showModal();
     });
 
-    setupStartBtn.addEventListener('click', () => {
-      init(true);
-      hideModal();
-      applySetupPattern();
-    });
-
     canvas.addEventListener('click', (e) => {
       if (setupModal.style.display !== 'none') return;
       const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left)/cellSize);
-      const y = Math.floor((e.clientY - rect.top)/cellSize);
-      const idx = y*cols + x;
+      const x = Math.floor((e.clientX - rect.left) / cellSize);
+      const y = Math.floor((e.clientY - rect.top) / cellSize);
+      const idx = y * cols + x;
       grid[idx] = grid[idx] ? 0 : 1;
       drawGrid();
     });
